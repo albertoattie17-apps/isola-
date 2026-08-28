@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Tienda Playa | Gestión de Negocio",
+  title: "Isola App | Gestión de Negocio",
   description: "Productos, clientes, ventas, inventario y cuentas por cobrar",
 };
 
