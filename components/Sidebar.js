@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -12,6 +13,8 @@ import {
   Wallet,
   LogOut,
   Palmtree,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const links = [
@@ -26,6 +29,7 @@ const links = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [collapsed, setCollapsed] = useState(false);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -33,11 +37,32 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 min-h-screen bg-ocean-700 text-white flex flex-col shrink-0">
-      <div className="flex items-center gap-2 px-5 py-6 border-b border-ocean-600">
-        <Palmtree className="text-sand-200" size={28} />
-        <span className="font-bold text-lg tracking-wide">Isola App</span>
+    <aside
+      className={`${
+        collapsed ? "w-16" : "w-64"
+      } min-h-screen bg-ocean-700 text-white flex flex-col shrink-0 transition-all duration-200 relative`}
+    >
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        title={collapsed ? "Expandir menú" : "Ocultar menú"}
+        className="absolute -right-3 top-8 bg-sand-200 text-ocean-800 rounded-full p-1 shadow-md hover:bg-sand-300 z-10"
+      >
+        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      </button>
+
+      <div
+        className={`flex items-center gap-2 px-5 py-6 border-b border-ocean-600 ${
+          collapsed ? "justify-center px-0" : ""
+        }`}
+      >
+        <Palmtree className="text-sand-200 shrink-0" size={28} />
+        {!collapsed && (
+          <span className="font-bold text-lg tracking-wide whitespace-nowrap">
+            Isola App
+          </span>
+        )}
       </div>
+
       <nav className="flex-1 px-3 py-4 space-y-1">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
@@ -45,23 +70,31 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              title={collapsed ? label : undefined}
               className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition ${
+                collapsed ? "justify-center px-0" : ""
+              } ${
                 active
                   ? "bg-sand-200 text-ocean-900 font-semibold"
                   : "text-ocean-50 hover:bg-ocean-600"
               }`}
             >
-              <Icon size={18} />
-              {label}
+              <Icon size={18} className="shrink-0" />
+              {!collapsed && <span className="whitespace-nowrap">{label}</span>}
             </Link>
           );
         })}
       </nav>
+
       <button
         onClick={handleLogout}
-        className="flex items-center gap-2 m-3 px-3 py-2 rounded-xl text-sm bg-ocean-800 hover:bg-ocean-900 transition"
+        title={collapsed ? "Cerrar sesión" : undefined}
+        className={`flex items-center gap-2 m-3 px-3 py-2 rounded-xl text-sm bg-ocean-800 hover:bg-ocean-900 transition ${
+          collapsed ? "justify-center px-0" : ""
+        }`}
       >
-        <LogOut size={16} /> Cerrar sesión
+        <LogOut size={16} className="shrink-0" />
+        {!collapsed && <span className="whitespace-nowrap">Cerrar sesión</span>}
       </button>
     </aside>
   );
