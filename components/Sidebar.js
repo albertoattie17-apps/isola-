@@ -36,7 +36,7 @@ export default function Sidebar() {
     <aside className="w-64 min-h-screen bg-ocean-700 text-white flex flex-col shrink-0">
       <div className="flex items-center gap-2 px-5 py-6 border-b border-ocean-600">
         <Palmtree className="text-sand-200" size={28} />
-        <span className="font-bold text-lg tracking-wide">Tienda Playa</span>
+        <span className="font-bold text-lg tracking-wide">Isola App</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {links.map(({ href, label, icon: Icon }) => {
