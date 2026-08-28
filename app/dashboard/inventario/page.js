@@ -9,9 +9,10 @@ export default function InventarioPage() {
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [tab, setTab] = useState("stock"); // stock | movimientos
+  const [tab, setTab] = useState("stock");
 
   const [productoId, setProductoId] = useState("");
+  const [varianteId, setVarianteId] = useState("");
   const [tipo, setTipo] = useState("entrada");
   const [cantidad, setCantidad] = useState(1);
   const [motivo, setMotivo] = useState("");
@@ -19,10 +20,10 @@ export default function InventarioPage() {
   async function loadAll() {
     setLoading(true);
     const [{ data: p }, { data: m }] = await Promise.all([
-      supabase.from("productos").select("*").order("nombre"),
+      supabase.from("productos").select("*, producto_variantes(*)").order("nombre"),
       supabase
         .from("movimientos_inventario")
-        .select("*, productos(nombre)")
+        .select("*, productos(nombre), producto_variantes(talla)")
         .order("fecha", { ascending: false })
         .limit(50),
     ]);
@@ -37,27 +38,33 @@ export default function InventarioPage() {
 
   function openNew() {
     setProductoId("");
+    setVarianteId("");
     setTipo("entrada");
     setCantidad(1);
     setMotivo("");
     setShowForm(true);
   }
 
+  function variantesDe(id) {
+    return productos.find((p) => p.id === id)?.producto_variantes || [];
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    const prod = productos.find((p) => p.id === productoId);
-    if (!prod) return;
+    const variante = variantesDe(productoId).find((v) => v.id === varianteId);
+    if (!variante) return;
 
     const cant = Number(cantidad);
-    const nuevoStock = tipo === "entrada" ? prod.stock + cant : prod.stock - cant;
+    const nuevoStock = tipo === "entrada" ? variante.stock + cant : variante.stock - cant;
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    await supabase.from("productos").update({ stock: nuevoStock }).eq("id", productoId);
+    await supabase.from("producto_variantes").update({ stock: nuevoStock }).eq("id", varianteId);
     await supabase.from("movimientos_inventario").insert({
       producto_id: productoId,
+      variante_id: varianteId,
       tipo,
       cantidad: cant,
       motivo: motivo || (tipo === "entrada" ? "Ingreso de mercancía" : "Ajuste de salida"),
@@ -70,10 +77,10 @@ export default function InventarioPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-ocean-800">Inventario</h1>
-          <p className="text-ocean-500">Existencias y movimientos de stock</p>
+          <p className="text-ocean-500">Existencias y movimientos por talla</p>
         </div>
         <button onClick={openNew} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Registrar movimiento
@@ -101,27 +108,31 @@ export default function InventarioPage() {
             <thead>
               <tr>
                 <th>Producto</th>
+                <th>Talla</th>
                 <th>Stock actual</th>
                 <th>Stock mínimo</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={4} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
-              {productos.map((p) => (
-                <tr key={p.id}>
-                  <td className="font-medium">{p.nombre}</td>
-                  <td>{p.stock}</td>
-                  <td>{p.stock_minimo}</td>
-                  <td>
-                    {p.stock <= p.stock_minimo ? (
-                      <span className="text-sunset-600 font-semibold">Stock bajo</span>
-                    ) : (
-                      <span className="text-palm-600">OK</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {loading && <tr><td colSpan={5} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
+              {productos.flatMap((p) =>
+                (p.producto_variantes || []).map((v) => (
+                  <tr key={v.id}>
+                    <td className="font-medium">{p.nombre}</td>
+                    <td>{v.talla}</td>
+                    <td>{v.stock}</td>
+                    <td>{v.stock_minimo}</td>
+                    <td>
+                      {v.stock <= v.stock_minimo ? (
+                        <span className="text-sunset-600 font-semibold">Stock bajo</span>
+                      ) : (
+                        <span className="text-palm-600">OK</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -134,6 +145,7 @@ export default function InventarioPage() {
               <tr>
                 <th>Fecha</th>
                 <th>Producto</th>
+                <th>Talla</th>
                 <th>Tipo</th>
                 <th>Cantidad</th>
                 <th>Motivo</th>
@@ -144,6 +156,7 @@ export default function InventarioPage() {
                 <tr key={m.id}>
                   <td>{new Date(m.fecha).toLocaleString()}</td>
                   <td>{m.productos?.nombre}</td>
+                  <td>{m.producto_variantes?.talla || "-"}</td>
                   <td className="flex items-center gap-1 capitalize">
                     {m.tipo === "entrada" ? (
                       <ArrowUpCircle size={14} className="text-palm-600" />
@@ -171,10 +184,20 @@ export default function InventarioPage() {
 
             <label className="text-sm font-medium">Producto</label>
             <select required className="input-field mt-1 mb-3" value={productoId}
-              onChange={(e) => setProductoId(e.target.value)}>
+              onChange={(e) => { setProductoId(e.target.value); setVarianteId(""); }}>
               <option value="">Selecciona producto</option>
               {productos.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre} (stock: {p.stock})</option>
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
+            </select>
+
+            <label className="text-sm font-medium">Talla</label>
+            <select required className="input-field mt-1 mb-3" value={varianteId}
+              disabled={!productoId}
+              onChange={(e) => setVarianteId(e.target.value)}>
+              <option value="">Selecciona talla</option>
+              {variantesDe(productoId).map((v) => (
+                <option key={v.id} value={v.id}>{v.talla} (stock: {v.stock})</option>
               ))}
             </select>
 
