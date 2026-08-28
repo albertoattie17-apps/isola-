@@ -1,86 +1,75 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { Package, Users, ShoppingCart, Wallet } from "lucide-react";
 import PalmDecor from "@/components/PalmDecor";
-import { Palmtree, Waves } from "lucide-react";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+export default function DashboardHome() {
+  const [stats, setStats] = useState({
+    productos: 0,
+    clientes: 0,
+    ventasHoy: 0,
+    porCobrar: 0,
+  });
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (error) {
-      setError("Usuario o contraseña incorrectos.");
-      return;
+  useEffect(() => {
+    async function load() {
+      const [{ count: productos }, { count: clientes }] = await Promise.all([
+        supabase.from("productos").select("*", { count: "exact", head: true }),
+        supabase.from("clientes").select("*", { count: "exact", head: true }),
+      ]);
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const { data: ventasHoyData } = await supabase
+        .from("ventas")
+        .select("total")
+        .gte("fecha", hoy.toISOString());
+
+      const { data: cxcData } = await supabase
+        .from("cuentas_por_cobrar")
+        .select("saldo")
+        .eq("estado", "pendiente");
+
+      setStats({
+        productos: productos || 0,
+        clientes: clientes || 0,
+        ventasHoy:
+          ventasHoyData?.reduce((acc, v) => acc + Number(v.total), 0) || 0,
+        porCobrar:
+          cxcData?.reduce((acc, c) => acc + Number(c.saldo), 0) || 0,
+      });
     }
-    router.push("/dashboard");
-  }
+    load();
+  }, []);
+
+  const cards = [
+    { label: "Productos", value: stats.productos, icon: Package, color: "bg-ocean-500" },
+    { label: "Clientes", value: stats.clientes, icon: Users, color: "bg-palm-500" },
+    { label: "Ventas de hoy", value: `$${stats.ventasHoy.toFixed(2)}`, icon: ShoppingCart, color: "bg-sunset-500" },
+    { label: "Por cobrar", value: `$${stats.porCobrar.toFixed(2)}`, icon: Wallet, color: "bg-sand-500" },
+  ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
-      <PalmDecor className="absolute -left-10 -top-6 w-40 opacity-90" />
-      <PalmDecor className="absolute -right-6 top-0 w-32 opacity-80 scale-x-[-1]" />
-      <Waves className="absolute bottom-6 left-1/2 -translate-x-1/2 text-ocean-300" size={200} strokeWidth={0.5} />
+    <div className="relative">
+      <PalmDecor className="absolute -right-4 -top-10 w-32 opacity-40 pointer-events-none" />
+      <h1 className="text-2xl font-bold text-ocean-800 mb-1">¡Bienvenido! 🌴</h1>
+      <p className="text-ocean-500 mb-6">Resumen general de tu negocio</p>
 
-      <form
-        onSubmit={handleSubmit}
-        className="card relative z-10 w-full max-w-sm p-8"
-      >
-        <div className="flex flex-col items-center mb-6">
-          <div className="bg-sand-100 rounded-full p-3 mb-2">
-            <Palmtree className="text-palm-600" size={32} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map(({ label, value, icon: Icon, color }) => (
+          <div key={label} className="card p-5 flex items-center gap-4">
+            <div className={`${color} text-white rounded-xl p-3`}>
+              <Icon size={22} />
+            </div>
+            <div>
+              <p className="text-sm text-ocean-500">{label}</p>
+              <p className="text-xl font-bold text-ocean-900">{value}</p>
+            </div>
           </div>
-          <h1 className="text-xl font-bold text-ocean-800">Isola App</h1>
-          <p className="text-sm text-ocean-500">Ingresa a tu cuenta</p>
-        </div>
-
-        {error && (
-          <div className="bg-sunset-500/10 text-sunset-600 text-sm rounded-lg px-3 py-2 mb-4">
-            {error}
-          </div>
-        )}
-
-        <label className="text-sm font-medium text-ocean-700">Correo</label>
-        <input
-          type="email"
-          required
-          className="input-field mt-1 mb-4"
-          placeholder="tucorreo@ejemplo.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <label className="text-sm font-medium text-ocean-700">Contraseña</label>
-        <input
-          type="password"
-          required
-          className="input-field mt-1 mb-6"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? "Ingresando..." : "Iniciar sesión"}
-        </button>
-
-        <p className="text-xs text-ocean-400 mt-4 text-center">
-          Los usuarios se crean desde el panel de Supabase (Authentication).
-        </p>
-      </form>
+        ))}
+      </div>
     </div>
   );
 }
