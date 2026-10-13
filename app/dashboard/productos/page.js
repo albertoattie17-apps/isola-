@@ -82,6 +82,9 @@ export default function ProductosPage() {
       costo: Number(form.costo) || 0,
     };
 
+    // El color solo se envía si el formulario lo trae (así no falla si la columna aún no existe)
+    if ("color" in form) payload.color = (form.color || "").trim() || null;
+
     let productoId = form.id;
 
     if (productoId) {
@@ -165,6 +168,12 @@ export default function ProductosPage() {
               <div className="min-w-0">
                 <p className="font-semibold text-ocean-900 break-words">{p.nombre}</p>
                 <p className="text-xs text-ocean-500 mt-0.5">{p.categoria || "Sin categoría"}</p>
+                {p.color && (
+                  <p className="text-sm text-ocean-800 mt-1">
+                    <span className="text-ocean-500">Color:</span>{" "}
+                    <span className="font-medium">{p.color}</span>
+                  </p>
+                )}
               </div>
               <div className="text-right shrink-0">
                 <p className="text-lg font-bold text-ocean-800">${Number(p.precio).toFixed(2)}</p>
@@ -215,6 +224,7 @@ export default function ProductosPage() {
             <tr>
               <th>Nombre</th>
               <th>Categoría</th>
+              <th>Color</th>
               <th>Precio</th>
               <th>Tallas / Stock</th>
               <th></th>
@@ -222,15 +232,16 @@ export default function ProductosPage() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={5} className="text-center py-6 text-ocean-400">Cargando...</td></tr>
+              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">Cargando...</td></tr>
             )}
             {!loading && productos.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-6 text-ocean-400">No hay productos registrados.</td></tr>
+              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">No hay productos registrados.</td></tr>
             )}
             {productos.map((p) => (
               <tr key={p.id}>
                 <td className="font-medium">{p.nombre}</td>
                 <td>{p.categoria || "-"}</td>
+                <td>{p.color || "-"}</td>
                 <td>${Number(p.precio).toFixed(2)}</td>
                 <td>
                   <div className="flex flex-wrap gap-1">
@@ -288,6 +299,10 @@ export default function ProductosPage() {
             <label className="text-sm font-medium">Categoría</label>
             <input className="input-field mt-1 mb-3" value={form.categoria || ""}
               onChange={(e) => setForm({ ...form, categoria: e.target.value })} />
+
+            <label className="text-sm font-medium">Color</label>
+            <input className="input-field mt-1 mb-3" placeholder="Ej. Rojo, Azul marino" value={form.color || ""}
+              onChange={(e) => setForm({ ...form, color: e.target.value })} />
 
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
