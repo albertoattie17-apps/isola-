@@ -12,6 +12,12 @@ export default function ClientesPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [clienteAEliminar, setClienteAEliminar] = useState(null);
+  const [revisando, setRevisando] = useState(false);
+  const [ventasDelCliente, setVentasDelCliente] = useState(0);
+  const [saldoPendiente, setSaldoPendiente] = useState(0);
+  const [eliminando, setEliminando] = useState(false);
+
   async function loadClientes() {
     setLoading(true);
     const { data } = await supabase
@@ -43,9 +49,32 @@ export default function ClientesPage() {
     loadClientes();
   }
 
-  async function handleDelete(id) {
-    if (!confirm("¿Eliminar este cliente?")) return;
-    await supabase.from("clientes").delete().eq("id", id);
+  async function pedirEliminar(c) {
+    setVentasDelCliente(0);
+    setSaldoPendiente(0);
+    setClienteAEliminar(c);
+    setRevisando(true);
+
+    // Un cliente con ventas no se puede borrar (se perdería el historial)
+    const [{ count }, { data: cuentas }] = await Promise.all([
+      supabase.from("ventas").select("id", { count: "exact", head: true }).eq("cliente_id", c.id),
+      supabase.from("cuentas_por_cobrar").select("saldo").eq("cliente_id", c.id),
+    ]);
+    setVentasDelCliente(count || 0);
+    setSaldoPendiente((cuentas || []).reduce((acc, x) => acc + Number(x.saldo || 0), 0));
+    setRevisando(false);
+  }
+
+  async function eliminarCliente() {
+    if (!clienteAEliminar) return;
+    setEliminando(true);
+    const { error } = await supabase.from("clientes").delete().eq("id", clienteAEliminar.id);
+    setEliminando(false);
+    if (error) {
+      alert("No se pudo eliminar el cliente: " + error.message);
+      return;
+    }
+    setClienteAEliminar(null);
     loadClientes();
   }
 
@@ -104,7 +133,7 @@ export default function ClientesPage() {
                 <Pencil size={15} /> Editar
               </button>
               <button
-                onClick={() => handleDelete(c.id)}
+                onClick={() => pedirEliminar(c)}
                 className="flex items-center gap-1 text-sm text-sunset-500 hover:text-sunset-600"
               >
                 <Trash2 size={15} /> Eliminar
@@ -142,7 +171,7 @@ export default function ClientesPage() {
                     <button onClick={() => { setForm(c); setShowForm(true); }} className="text-ocean-600 hover:text-ocean-800">
                       <Pencil size={16} />
                     </button>
-                    <button onClick={() => handleDelete(c.id)} className="text-sunset-500 hover:text-sunset-700">
+                    <button onClick={() => pedirEliminar(c)} className="text-sunset-500 hover:text-sunset-700">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -181,6 +210,63 @@ export default function ClientesPage() {
 
             <button type="submit" className="btn-primary w-full">Guardar</button>
           </form>
+        </div>
+      )}
+
+      {clienteAEliminar && (
+        <div className="fixed inset-0 bg-ocean-900/40 flex items-center justify-center z-50 px-4">
+          <div className="card w-full max-w-sm p-6" role="alertdialog" aria-modal="true">
+            {revisando ? (
+              <p className="text-ocean-600 text-center py-4">Revisando...</p>
+            ) : ventasDelCliente > 0 ? (
+              <>
+                <h2 className="text-lg font-bold text-ocean-800 mb-2">
+                  No se puede eliminar este cliente
+                </h2>
+                <p className="text-sm text-ocean-700 mb-2">
+                  <span className="font-semibold">{clienteAEliminar.nombre}</span> tiene{" "}
+                  {ventasDelCliente} {ventasDelCliente === 1 ? "venta registrada" : "ventas registradas"}.
+                  Para no perder el historial de ventas, no se puede eliminar.
+                </p>
+                {saldoPendiente > 0 && (
+                  <p className="text-sm text-sunset-600 bg-sunset-400/10 rounded-lg px-3 py-2 mb-2">
+                    Además tiene ${saldoPendiente.toFixed(2)} pendiente por cobrar.
+                  </p>
+                )}
+                <div className="flex justify-end mt-4">
+                  <button type="button" onClick={() => setClienteAEliminar(null)} className="btn-primary">
+                    Entendido
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-ocean-800 mb-2">
+                  ¿Estás seguro de que quieres eliminar este cliente?
+                </h2>
+                <p className="text-sm text-ocean-700 mb-1 font-semibold">{clienteAEliminar.nombre}</p>
+                <p className="text-sm text-ocean-700">Esta acción no se puede deshacer.</p>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setClienteAEliminar(null)}
+                    disabled={eliminando}
+                    className="btn-secondary"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={eliminarCliente}
+                    disabled={eliminando}
+                    className="btn-danger"
+                  >
+                    {eliminando ? "Eliminando..." : "Sí, eliminar"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
