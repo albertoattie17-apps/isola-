@@ -336,61 +336,66 @@ export default function ProductosPage() {
               </div>
 
               {tallas.map((t, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 mb-2 items-center">
-                  <input
-                    className="input-field col-span-12 sm:col-span-4"
-                    placeholder="Talla (ej. S, M, 38)"
-                    value={t.talla}
-                    onChange={(e) => updateTalla(idx, "talla", e.target.value)}
-                  />
-
-                  <div className="col-span-8 sm:col-span-5 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => changeStock(idx, -1)}
-                      aria-label="Restar 1 al stock"
-                      className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-sand-200 hover:bg-sand-300 text-ocean-900"
-                    >
-                      <Minus size={16} />
-                    </button>
+                <div key={idx} className="mb-3">
+                  <div className="flex items-center gap-2">
                     <input
-                      type="number" min="0" inputMode="numeric"
-                      className="input-field min-w-0 flex-1 text-center px-1"
-                      aria-label="Stock"
-                      placeholder="Stock"
-                      value={t.stock}
-                      onChange={(e) => updateTalla(idx, "stock", e.target.value)}
+                      className="input-field min-w-0 flex-1"
+                      placeholder="Talla"
+                      aria-label="Talla"
+                      value={t.talla}
+                      onChange={(e) => updateTalla(idx, "talla", e.target.value)}
                     />
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => changeStock(idx, -1)}
+                        aria-label="Restar 1 al stock"
+                        className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-sand-200 hover:bg-sand-300 text-ocean-900"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <input
+                        type="number" min="0" inputMode="numeric"
+                        className="input-field !w-14 text-center !px-1"
+                        aria-label="Cantidad en stock"
+                        value={t.stock}
+                        onChange={(e) => updateTalla(idx, "stock", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => changeStock(idx, 1)}
+                        aria-label="Sumar 1 al stock"
+                        className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => changeStock(idx, 1)}
-                      aria-label="Sumar 1 al stock"
-                      className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white"
+                      onClick={() => removeTalla(idx)}
+                      aria-label="Quitar talla"
+                      className="shrink-0 p-1 text-sunset-500 hover:text-sunset-600"
                     >
-                      <Plus size={16} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
 
-                  <input
-                    type="number" min="0" inputMode="numeric"
-                    className="input-field col-span-3 sm:col-span-2 text-center px-1"
-                    aria-label="Stock mínimo"
-                    placeholder="Mín."
-                    value={t.stock_minimo}
-                    onChange={(e) => updateTalla(idx, "stock_minimo", e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeTalla(idx)}
-                    aria-label="Quitar talla"
-                    className="col-span-1 flex justify-center text-sunset-500"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center gap-2 mt-1 pl-1 text-xs text-ocean-500">
+                    <span>Avisar cuando queden</span>
+                    <input
+                      type="number" min="0" inputMode="numeric"
+                      className="input-field !w-14 !py-1 !px-1 text-center text-xs"
+                      aria-label="Stock mínimo"
+                      value={t.stock_minimo}
+                      onChange={(e) => updateTalla(idx, "stock_minimo", e.target.value)}
+                    />
+                  </div>
                 </div>
               ))}
               <p className="text-xs text-ocean-400 mt-1">
-                Usa − y + para ajustar el stock, o escribe el número. "Mín." es el stock a partir del cual se avisa que queda poco.
+                Usa − y + para ajustar la cantidad, o escribe el número.
               </p>
               <p className="text-xs text-ocean-400 mt-1">
                 Si el producto no maneja tallas, escribe una sola fila como "Única".
