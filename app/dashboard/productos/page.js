@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Minus, Pencil, Trash2, X } from "lucide-react";
 
 const emptyProducto = {
   id: null,
@@ -64,6 +64,11 @@ export default function ProductosPage() {
     const next = [...tallas];
     next[index][field] = value;
     setTallas(next);
+  }
+
+  function changeStock(index, delta) {
+    const actual = Number(tallas[index].stock) || 0;
+    updateTalla(index, "stock", Math.max(0, actual + delta));
   }
 
   function removeTalla(index) {
@@ -333,28 +338,60 @@ export default function ProductosPage() {
               {tallas.map((t, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 mb-2 items-center">
                   <input
-                    className="input-field col-span-5"
-                    placeholder="Talla (ej. S, M, L, 38...)"
+                    className="input-field col-span-12 sm:col-span-4"
+                    placeholder="Talla (ej. S, M, 38)"
                     value={t.talla}
                     onChange={(e) => updateTalla(idx, "talla", e.target.value)}
                   />
+
+                  <div className="col-span-8 sm:col-span-5 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => changeStock(idx, -1)}
+                      aria-label="Restar 1 al stock"
+                      className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-sand-200 hover:bg-sand-300 text-ocean-900"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <input
+                      type="number" min="0" inputMode="numeric"
+                      className="input-field min-w-0 flex-1 text-center px-1"
+                      aria-label="Stock"
+                      placeholder="Stock"
+                      value={t.stock}
+                      onChange={(e) => updateTalla(idx, "stock", e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => changeStock(idx, 1)}
+                      aria-label="Sumar 1 al stock"
+                      className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+
                   <input
-                    type="number" min="0" className="input-field col-span-3"
-                    placeholder="Stock"
-                    value={t.stock}
-                    onChange={(e) => updateTalla(idx, "stock", e.target.value)}
-                  />
-                  <input
-                    type="number" min="0" className="input-field col-span-3"
-                    placeholder="Stock mín."
+                    type="number" min="0" inputMode="numeric"
+                    className="input-field col-span-3 sm:col-span-2 text-center px-1"
+                    aria-label="Stock mínimo"
+                    placeholder="Mín."
                     value={t.stock_minimo}
                     onChange={(e) => updateTalla(idx, "stock_minimo", e.target.value)}
                   />
-                  <button type="button" onClick={() => removeTalla(idx)} className="col-span-1 text-sunset-500">
+                  <button
+                    type="button"
+                    onClick={() => removeTalla(idx)}
+                    aria-label="Quitar talla"
+                    className="col-span-1 flex justify-center text-sunset-500"
+                  >
                     <Trash2 size={16} />
                   </button>
                 </div>
               ))}
+              <p className="text-xs text-ocean-400 mt-1">
+                Usa − y + para ajustar el stock, o escribe el número. "Mín." es el stock a partir del cual se avisa que queda poco.
+              </p>
               <p className="text-xs text-ocean-400 mt-1">
                 Si el producto no maneja tallas, escribe una sola fila como "Única".
               </p>
