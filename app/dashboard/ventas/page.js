@@ -160,7 +160,56 @@ export default function VentasPage() {
         </button>
       </div>
 
-      <div className="card overflow-x-auto">
+      {/* Celular: una tarjeta por venta */}
+      <div className="md:hidden space-y-3">
+        {loading && (
+          <div className="card p-6 text-center text-ocean-400">Cargando...</div>
+        )}
+        {!loading && ventas.length === 0 && (
+          <div className="card p-6 text-center text-ocean-400">No hay ventas registradas.</div>
+        )}
+        {ventas.map((v) => (
+          <div key={v.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-ocean-900 break-words">
+                  {v.clientes?.nombre || "Cliente general"}
+                </p>
+                <p className="text-xs text-ocean-500 mt-0.5">
+                  {new Date(v.fecha).toLocaleString()}
+                </p>
+              </div>
+              <p className="text-lg font-bold text-ocean-800 shrink-0">
+                ${Number(v.total).toFixed(2)}
+              </p>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-ocean-100 flex flex-wrap gap-2">
+              <span
+                className={`text-sm px-3 py-1 rounded-full border capitalize ${
+                  v.tipo_pago === "credito"
+                    ? "border-sand-400 text-sand-700 bg-sand-100"
+                    : "border-ocean-200 text-ocean-700 bg-white"
+                }`}
+              >
+                {v.tipo_pago === "credito" ? "Crédito" : "Contado"}
+              </span>
+              <span
+                className={`text-sm px-3 py-1 rounded-full border capitalize ${
+                  v.estado === "anulada"
+                    ? "border-sunset-400 text-sunset-600 bg-sunset-400/10"
+                    : "border-palm-300 text-palm-700 bg-palm-50"
+                }`}
+              >
+                {v.estado}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Computadora: tabla */}
+      <div className="card overflow-x-auto hidden md:block">
         <table className="beach-table w-full">
           <thead>
             <tr>

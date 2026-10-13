@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Phone, Mail, MapPin } from "lucide-react";
 
 const empty = { id: null, nombre: "", telefono: "", email: "", direccion: "" };
 
@@ -61,7 +61,61 @@ export default function ClientesPage() {
         </button>
       </div>
 
-      <div className="card overflow-x-auto">
+      {/* Celular: una tarjeta por cliente */}
+      <div className="md:hidden space-y-3">
+        {loading && (
+          <div className="card p-6 text-center text-ocean-400">Cargando...</div>
+        )}
+        {!loading && clientes.length === 0 && (
+          <div className="card p-6 text-center text-ocean-400">No hay clientes registrados.</div>
+        )}
+        {clientes.map((c) => (
+          <div key={c.id} className="card p-4">
+            <p className="font-semibold text-ocean-900 break-words">{c.nombre}</p>
+
+            {(c.telefono || c.email || c.direccion) && (
+              <div className="mt-3 pt-3 border-t border-ocean-100 space-y-2 text-sm text-ocean-800">
+                {c.telefono && (
+                  <p className="flex items-start gap-2">
+                    <Phone size={15} className="mt-0.5 shrink-0 text-ocean-500" />
+                    <a href={`tel:${c.telefono}`} className="break-all">{c.telefono}</a>
+                  </p>
+                )}
+                {c.email && (
+                  <p className="flex items-start gap-2">
+                    <Mail size={15} className="mt-0.5 shrink-0 text-ocean-500" />
+                    <a href={`mailto:${c.email}`} className="break-all">{c.email}</a>
+                  </p>
+                )}
+                {c.direccion && (
+                  <p className="flex items-start gap-2">
+                    <MapPin size={15} className="mt-0.5 shrink-0 text-ocean-500" />
+                    <span className="break-words">{c.direccion}</span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-3 flex justify-end gap-4">
+              <button
+                onClick={() => { setForm(c); setShowForm(true); }}
+                className="flex items-center gap-1 text-sm text-ocean-600 hover:text-ocean-800"
+              >
+                <Pencil size={15} /> Editar
+              </button>
+              <button
+                onClick={() => handleDelete(c.id)}
+                className="flex items-center gap-1 text-sm text-sunset-500 hover:text-sunset-600"
+              >
+                <Trash2 size={15} /> Eliminar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Computadora: tabla */}
+      <div className="card overflow-x-auto hidden md:block">
         <table className="beach-table w-full">
           <thead>
             <tr>
