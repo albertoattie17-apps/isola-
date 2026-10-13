@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Plus, X, Trash2 } from "lucide-react";
 
+const clienteVacio = { nombre: "", telefono: "", email: "", direccion: "" };
+
 export default function VentasPage() {
   const [ventas, setVentas] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -16,6 +18,10 @@ export default function VentasPage() {
   const [tipoPago, setTipoPago] = useState("contado");
   const [fechaVenc, setFechaVenc] = useState("");
   const [items, setItems] = useState([]); // {producto_id, variante_id, cantidad, precio_unitario}
+
+  const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [nuevoCliente, setNuevoCliente] = useState(clienteVacio);
+  const [savingCliente, setSavingCliente] = useState(false);
 
   async function loadAll() {
     setLoading(true);
@@ -38,7 +44,40 @@ export default function VentasPage() {
     loadAll();
   }, []);
 
+  async function crearCliente() {
+    const nombre = nuevoCliente.nombre.trim();
+    if (!nombre) {
+      alert("Escribe el nombre del cliente.");
+      return;
+    }
+    setSavingCliente(true);
+    // Se guarda en la misma tabla "clientes", así también aparece en la pantalla Clientes
+    const { data, error } = await supabase
+      .from("clientes")
+      .insert({
+        nombre,
+        telefono: nuevoCliente.telefono.trim() || null,
+        email: nuevoCliente.email.trim() || null,
+        direccion: nuevoCliente.direccion.trim() || null,
+      })
+      .select("id, nombre")
+      .single();
+    setSavingCliente(false);
+
+    if (error) {
+      alert("No se pudo guardar el cliente: " + error.message);
+      return;
+    }
+
+    setClientes((prev) => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    setClienteId(data.id);
+    setNuevoCliente(clienteVacio);
+    setShowNuevoCliente(false);
+  }
+
   function openNew() {
+    setShowNuevoCliente(false);
+    setNuevoCliente(clienteVacio);
     setClienteId("");
     setTipoPago("contado");
     setFechaVenc("");
@@ -255,6 +294,13 @@ export default function VentasPage() {
                     <option key={c.id} value={c.id}>{c.nombre}</option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  onClick={() => setShowNuevoCliente(!showNuevoCliente)}
+                  className="mt-1 text-ocean-600 hover:text-ocean-800 text-sm font-medium"
+                >
+                  {showNuevoCliente ? "Cancelar nuevo cliente" : "+ Nuevo cliente"}
+                </button>
               </div>
               <div>
                 <label className="text-sm font-medium">Tipo de pago</label>
@@ -264,6 +310,71 @@ export default function VentasPage() {
                 </select>
               </div>
             </div>
+
+            {showNuevoCliente && (
+              <div
+                className="rounded-xl border border-ocean-100 bg-ocean-50/60 p-3 mb-4"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    crearCliente();
+                  }
+                }}
+              >
+                <p className="text-sm font-semibold text-ocean-700 mb-2">Nuevo cliente</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-ocean-600">Nombre</label>
+                    <input
+                      className="input-field mt-1"
+                      value={nuevoCliente.nombre}
+                      onChange={(e) => setNuevoCliente({ ...nuevoCliente, nombre: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-ocean-600">Teléfono</label>
+                    <input
+                      className="input-field mt-1" inputMode="tel"
+                      value={nuevoCliente.telefono}
+                      onChange={(e) => setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-ocean-600">Email</label>
+                    <input
+                      type="email" className="input-field mt-1"
+                      value={nuevoCliente.email}
+                      onChange={(e) => setNuevoCliente({ ...nuevoCliente, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-ocean-600">Dirección</label>
+                    <input
+                      className="input-field mt-1"
+                      value={nuevoCliente.direccion}
+                      onChange={(e) => setNuevoCliente({ ...nuevoCliente, direccion: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowNuevoCliente(false); setNuevoCliente(clienteVacio); }}
+                    className="btn-secondary text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={crearCliente}
+                    disabled={savingCliente}
+                    className="btn-primary text-sm"
+                  >
+                    {savingCliente ? "Guardando..." : "Guardar cliente"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {tipoPago === "credito" && (
               <div className="mb-4">
