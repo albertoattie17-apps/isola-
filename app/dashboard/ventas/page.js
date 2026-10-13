@@ -23,6 +23,10 @@ export default function VentasPage() {
   const [nuevoCliente, setNuevoCliente] = useState(clienteVacio);
   const [savingCliente, setSavingCliente] = useState(false);
 
+  const [ventaAEliminar, setVentaAEliminar] = useState(null);
+  const [abonosVenta, setAbonosVenta] = useState(0);
+  const [eliminando, setEliminando] = useState(false);
+
   async function loadAll() {
     setLoading(true);
     const [{ data: v }, { data: c }, { data: p }] = await Promise.all([
@@ -43,6 +47,83 @@ export default function VentasPage() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  async function pedirEliminar(v) {
+    setAbonosVenta(0);
+    setVentaAEliminar(v);
+    // Si la venta fue a crédito, vemos cuánto se ha abonado para avisarlo en la confirmación
+    const { data } = await supabase
+      .from("cuentas_por_cobrar")
+      .select("monto_pagado")
+      .eq("venta_id", v.id);
+    setAbonosVenta((data || []).reduce((acc, c) => acc + Number(c.monto_pagado || 0), 0));
+  }
+
+  async function eliminarVenta() {
+    const v = ventaAEliminar;
+    if (!v) return;
+    setEliminando(true);
+
+    // 1. Guardamos lo vendido antes de borrar, para poder devolver el stock
+    const { data: itemsVenta, error: errItems } = await supabase
+      .from("venta_items")
+      .select("producto_id, variante_id, cantidad")
+      .eq("venta_id", v.id);
+    if (errItems) {
+      alert("No se pudo eliminar la venta: " + errItems.message);
+      setEliminando(false);
+      return;
+    }
+
+    // 2. Cuenta por cobrar de esa venta (sus abonos se borran con ella)
+    const { error: errCxc } = await supabase
+      .from("cuentas_por_cobrar")
+      .delete()
+      .eq("venta_id", v.id);
+    if (errCxc) {
+      alert("No se pudo eliminar la venta: " + errCxc.message);
+      setEliminando(false);
+      return;
+    }
+
+    // 3. La venta (sus renglones se borran con ella)
+    const { error: errVenta } = await supabase.from("ventas").delete().eq("id", v.id);
+    if (errVenta) {
+      alert("No se pudo eliminar la venta: " + errVenta.message);
+      setEliminando(false);
+      return;
+    }
+
+    // 4. Devolver el stock a cada talla y dejarlo anotado en el historial de Inventario
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    for (const it of itemsVenta || []) {
+      if (!it.variante_id) continue;
+      const { data: variante } = await supabase
+        .from("producto_variantes")
+        .select("stock, talla")
+        .eq("id", it.variante_id)
+        .single();
+      if (!variante) continue;
+      await supabase
+        .from("producto_variantes")
+        .update({ stock: variante.stock + it.cantidad })
+        .eq("id", it.variante_id);
+      await supabase.from("movimientos_inventario").insert({
+        producto_id: it.producto_id,
+        variante_id: it.variante_id,
+        tipo: "entrada",
+        cantidad: it.cantidad,
+        motivo: `Venta eliminada (talla ${variante.talla})`,
+        usuario_email: user?.email,
+      });
+    }
+
+    setEliminando(false);
+    setVentaAEliminar(null);
+    loadAll();
+  }
 
   async function crearCliente() {
     const nombre = nuevoCliente.nombre.trim();
@@ -243,6 +324,15 @@ export default function VentasPage() {
                 {v.estado}
               </span>
             </div>
+
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={() => pedirEliminar(v)}
+                className="flex items-center gap-1 text-sm text-sunset-500 hover:text-sunset-600"
+              >
+                <Trash2 size={15} /> Eliminar
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -257,12 +347,13 @@ export default function VentasPage() {
               <th>Tipo pago</th>
               <th>Total</th>
               <th>Estado</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={5} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
+            {loading && <tr><td colSpan={6} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
             {!loading && ventas.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-6 text-ocean-400">No hay ventas registradas.</td></tr>
+              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">No hay ventas registradas.</td></tr>
             )}
             {ventas.map((v) => (
               <tr key={v.id}>
@@ -271,6 +362,16 @@ export default function VentasPage() {
                 <td className="capitalize">{v.tipo_pago}</td>
                 <td>${Number(v.total).toFixed(2)}</td>
                 <td className="capitalize">{v.estado}</td>
+                <td>
+                  <button
+                    onClick={() => pedirEliminar(v)}
+                    title="Eliminar venta"
+                    aria-label="Eliminar venta"
+                    className="text-sunset-500 hover:text-sunset-700"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -447,6 +548,49 @@ export default function VentasPage() {
               {saving ? "Guardando..." : "Registrar venta"}
             </button>
           </form>
+        </div>
+      )}
+
+      {ventaAEliminar && (
+        <div className="fixed inset-0 bg-ocean-900/40 flex items-center justify-center z-50 px-4">
+          <div className="card w-full max-w-sm p-6" role="alertdialog" aria-modal="true">
+            <h2 className="text-lg font-bold text-ocean-800 mb-2">
+              ¿Estás seguro de que quieres eliminar esta venta?
+            </h2>
+            <p className="text-sm text-ocean-700">
+              {ventaAEliminar.clientes?.nombre || "Cliente general"} ·{" "}
+              ${Number(ventaAEliminar.total).toFixed(2)}
+            </p>
+            <p className="text-xs text-ocean-500 mb-3">
+              {new Date(ventaAEliminar.fecha).toLocaleString()}
+            </p>
+            <p className="text-sm text-ocean-700 mb-2">
+              Se devolverá al inventario el stock de los productos vendidos. Esta acción no se puede deshacer.
+            </p>
+            {abonosVenta > 0 && (
+              <p className="text-sm text-sunset-600 bg-sunset-400/10 rounded-lg px-3 py-2 mb-2">
+                Esta venta ya tiene abonos por ${abonosVenta.toFixed(2)}. También se eliminarán.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => setVentaAEliminar(null)}
+                disabled={eliminando}
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={eliminarVenta}
+                disabled={eliminando}
+                className="btn-danger"
+              >
+                {eliminando ? "Eliminando..." : "Sí, eliminar"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
