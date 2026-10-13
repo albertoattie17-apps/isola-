@@ -32,3 +32,11 @@ table.beach-table th {
 table.beach-table td {
   @apply py-2 px-3 border-t border-ocean-100 text-sm;
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
