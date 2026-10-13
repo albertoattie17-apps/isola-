@@ -151,7 +151,65 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      <div className="card overflow-x-auto">
+      {/* Celular: una tarjeta por producto */}
+      <div className="md:hidden space-y-3">
+        {loading && (
+          <div className="card p-6 text-center text-ocean-400">Cargando...</div>
+        )}
+        {!loading && productos.length === 0 && (
+          <div className="card p-6 text-center text-ocean-400">No hay productos registrados.</div>
+        )}
+        {productos.map((p) => (
+          <div key={p.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-ocean-900 break-words">{p.nombre}</p>
+                <p className="text-xs text-ocean-500 mt-0.5">{p.categoria || "Sin categoría"}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-lg font-bold text-ocean-800">${Number(p.precio).toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-ocean-100">
+              <p className="text-xs font-semibold text-ocean-600 uppercase tracking-wide mb-2">
+                Tallas / Stock
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(p.producto_variantes || []).map((v) => (
+                  <span
+                    key={v.id}
+                    className={`text-sm px-3 py-1 rounded-full border ${
+                      v.stock <= v.stock_minimo
+                        ? "border-sunset-400 text-sunset-600 bg-sunset-400/10"
+                        : "border-ocean-200 text-ocean-700 bg-white"
+                    }`}
+                  >
+                    <span className="font-semibold">{v.talla}</span>
+                    <span className="mx-1 text-ocean-300">·</span>
+                    {v.stock}
+                  </span>
+                ))}
+                {(!p.producto_variantes || p.producto_variantes.length === 0) && (
+                  <span className="text-sm text-ocean-400">Sin tallas</span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex justify-end gap-4">
+              <button onClick={() => openEdit(p)} className="flex items-center gap-1 text-sm text-ocean-600 hover:text-ocean-800">
+                <Pencil size={15} /> Editar
+              </button>
+              <button onClick={() => handleDelete(p.id)} className="flex items-center gap-1 text-sm text-sunset-500 hover:text-sunset-600">
+                <Trash2 size={15} /> Eliminar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Computadora: tabla */}
+      <div className="card overflow-x-auto hidden md:block">
         <table className="beach-table w-full">
           <thead>
             <tr>
