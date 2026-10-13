@@ -88,7 +88,12 @@ export default function ProductosPage() {
     let productoId = form.id;
 
     if (productoId) {
-      await supabase.from("productos").update(payload).eq("id", productoId);
+      const { error } = await supabase.from("productos").update(payload).eq("id", productoId);
+      if (error) {
+        alert("No se pudo guardar el producto: " + error.message);
+        setSaving(false);
+        return;
+      }
     } else {
       const { data, error } = await supabase.from("productos").insert(payload).select().single();
       if (error) {
