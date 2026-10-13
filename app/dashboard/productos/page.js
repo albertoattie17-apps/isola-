@@ -211,7 +211,7 @@ export default function ProductosPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-ocean-900/40 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="card w-full max-w-lg p-6 relative my-auto">
+          <form onSubmit={handleSubmit} className="card w-full max-w-lg p-4 sm:p-6 relative my-auto">
             <button type="button" onClick={() => setShowForm(false)} className="absolute right-4 top-4 text-ocean-400">
               <X size={20} />
             </button>
@@ -253,28 +253,55 @@ export default function ProductosPage() {
               </div>
 
               {tallas.map((t, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 mb-2 items-center">
-                  <input
-                    className="input-field col-span-5"
-                    placeholder="Talla (ej. S, M, L, 38...)"
-                    value={t.talla}
-                    onChange={(e) => updateTalla(idx, "talla", e.target.value)}
-                  />
-                  <input
-                    type="number" min="0" className="input-field col-span-3"
-                    placeholder="Stock"
-                    value={t.stock}
-                    onChange={(e) => updateTalla(idx, "stock", e.target.value)}
-                  />
-                  <input
-                    type="number" min="0" className="input-field col-span-3"
-                    placeholder="Stock mín."
-                    value={t.stock_minimo}
-                    onChange={(e) => updateTalla(idx, "stock_minimo", e.target.value)}
-                  />
-                  <button type="button" onClick={() => removeTalla(idx)} className="col-span-1 text-sunset-500">
-                    <Trash2 size={16} />
-                  </button>
+                <div
+                  key={idx}
+                  className="rounded-xl border border-ocean-100 bg-ocean-50/60 p-3 mb-3"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-ocean-600 uppercase tracking-wide">
+                      Talla {idx + 1}
+                    </span>
+                    {tallas.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTalla(idx)}
+                        title="Quitar talla"
+                        className="flex items-center gap-1 text-sunset-500 hover:text-sunset-600 text-xs"
+                      >
+                        <Trash2 size={14} /> Quitar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2">
+                      <label className="text-xs text-ocean-600">Talla</label>
+                      <input
+                        className="input-field mt-1"
+                        placeholder="Ej. S, M, L, 38"
+                        value={t.talla}
+                        onChange={(e) => updateTalla(idx, "talla", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-ocean-600">Stock</label>
+                      <input
+                        type="number" min="0" inputMode="numeric"
+                        className="input-field mt-1"
+                        value={t.stock}
+                        onChange={(e) => updateTalla(idx, "stock", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-ocean-600">Stock mínimo</label>
+                      <input
+                        type="number" min="0" inputMode="numeric"
+                        className="input-field mt-1"
+                        value={t.stock_minimo}
+                        onChange={(e) => updateTalla(idx, "stock_minimo", e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
               <p className="text-xs text-ocean-400 mt-1">
