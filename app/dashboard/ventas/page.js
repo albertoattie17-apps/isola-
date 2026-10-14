@@ -23,6 +23,8 @@ export default function VentasPage() {
   const [nuevoCliente, setNuevoCliente] = useState(clienteVacio);
   const [savingCliente, setSavingCliente] = useState(false);
 
+  const [filtro, setFiltro] = useState("todas"); // todas | pendientes
+
   const [ventaAEliminar, setVentaAEliminar] = useState(null);
   const [abonosVenta, setAbonosVenta] = useState(0);
   const [eliminando, setEliminando] = useState(false);
@@ -30,7 +32,10 @@ export default function VentasPage() {
   async function loadAll() {
     setLoading(true);
     const [{ data: v }, { data: c }, { data: p }] = await Promise.all([
-      supabase.from("ventas").select("*, clientes(nombre)").order("fecha", { ascending: false }),
+      supabase
+        .from("ventas")
+        .select("*, clientes(nombre), cuentas_por_cobrar(saldo, estado, fecha_vencimiento)")
+        .order("fecha", { ascending: false }),
       supabase.from("clientes").select("id, nombre").order("nombre"),
       supabase
         .from("productos")
@@ -268,6 +273,24 @@ export default function VentasPage() {
     loadAll();
   }
 
+  // Estado de cobro de una venta: contado = pagada; crédito = según su cuenta por cobrar
+  function pagoDe(v) {
+    if (v.tipo_pago !== "credito") return { pendiente: false, saldo: 0, vencida: false };
+    const cuentas = v.cuentas_por_cobrar || [];
+    const saldo = cuentas.reduce((acc, c) => acc + Number(c.saldo || 0), 0);
+    const pendiente = saldo > 0;
+    const hoy = new Date().toISOString().slice(0, 10);
+    const vencida = pendiente && cuentas.some((c) => c.fecha_vencimiento && c.fecha_vencimiento < hoy);
+    return { pendiente, saldo, vencida };
+  }
+
+  const totalPendientes = ventas.filter((v) => pagoDe(v).pendiente).length;
+  const ventasVisibles =
+    filtro === "pendientes" ? ventas.filter((v) => pagoDe(v).pendiente) : ventas;
+  const sinResultados = filtro === "pendientes"
+    ? "No hay ventas pendientes de cobro."
+    : "No hay ventas registradas.";
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -280,15 +303,36 @@ export default function VentasPage() {
         </button>
       </div>
 
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setFiltro("todas")}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium ${
+            filtro === "todas" ? "bg-ocean-600 text-white" : "bg-white text-ocean-600"
+          }`}
+        >
+          Todas ({ventas.length})
+        </button>
+        <button
+          onClick={() => setFiltro("pendientes")}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium ${
+            filtro === "pendientes" ? "bg-ocean-600 text-white" : "bg-white text-ocean-600"
+          }`}
+        >
+          Pendientes ({totalPendientes})
+        </button>
+      </div>
+
       {/* Celular: una tarjeta por venta */}
       <div className="md:hidden space-y-3">
         {loading && (
           <div className="card p-6 text-center text-ocean-400">Cargando...</div>
         )}
-        {!loading && ventas.length === 0 && (
-          <div className="card p-6 text-center text-ocean-400">No hay ventas registradas.</div>
+        {!loading && ventasVisibles.length === 0 && (
+          <div className="card p-6 text-center text-ocean-400">{sinResultados}</div>
         )}
-        {ventas.map((v) => (
+        {ventasVisibles.map((v) => {
+          const pago = pagoDe(v);
+          return (
           <div key={v.id} className="card p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -323,6 +367,17 @@ export default function VentasPage() {
               >
                 {v.estado}
               </span>
+              <span
+                className={`text-sm px-3 py-1 rounded-full border ${
+                  pago.pendiente
+                    ? "border-sunset-400 text-sunset-600 bg-sunset-400/10"
+                    : "border-palm-300 text-palm-700 bg-palm-50"
+                }`}
+              >
+                {pago.pendiente
+                  ? `${pago.vencida ? "Vencida" : "Pendiente"} · $${pago.saldo.toFixed(2)}`
+                  : "Pagada"}
+              </span>
             </div>
 
             <div className="mt-3 flex justify-end">
@@ -334,7 +389,8 @@ export default function VentasPage() {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Computadora: tabla */}
@@ -347,21 +403,33 @@ export default function VentasPage() {
               <th>Tipo pago</th>
               <th>Total</th>
               <th>Estado</th>
+              <th>Cobro</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={6} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
-            {!loading && ventas.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">No hay ventas registradas.</td></tr>
+            {loading && <tr><td colSpan={7} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
+            {!loading && ventasVisibles.length === 0 && (
+              <tr><td colSpan={7} className="text-center py-6 text-ocean-400">{sinResultados}</td></tr>
             )}
-            {ventas.map((v) => (
+            {ventasVisibles.map((v) => {
+              const pago = pagoDe(v);
+              return (
               <tr key={v.id}>
                 <td>{new Date(v.fecha).toLocaleString()}</td>
                 <td>{v.clientes?.nombre || "Cliente general"}</td>
                 <td className="capitalize">{v.tipo_pago}</td>
                 <td>${Number(v.total).toFixed(2)}</td>
                 <td className="capitalize">{v.estado}</td>
+                <td>
+                  {pago.pendiente ? (
+                    <span className="text-sunset-600 font-medium">
+                      {pago.vencida ? "Vencida" : "Pendiente"} · ${pago.saldo.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-palm-600">Pagada</span>
+                  )}
+                </td>
                 <td>
                   <button
                     onClick={() => pedirEliminar(v)}
@@ -373,7 +441,8 @@ export default function VentasPage() {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
