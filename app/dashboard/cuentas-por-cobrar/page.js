@@ -11,29 +11,23 @@ export default function CuentasPorCobrarPage() {
   const [cuentaActiva, setCuentaActiva] = useState(null);
   const [monto, setMonto] = useState("");
   const [metodo, setMetodo] = useState("efectivo");
-  const [filtro, setFiltro] = useState("todas");
 
   async function loadCuentas() {
     setLoading(true);
-    let query = supabase
+    // Solo las cuentas pendientes; las pagadas ya no se muestran aquí
+    const { data } = await supabase
       .from("cuentas_por_cobrar")
       .select("*, clientes(nombre)")
+      .eq("estado", "pendiente")
       .order("created_at", { ascending: false });
-    if (filtro !== "todas") query = query.eq("estado", filtro);
-    const { data } = await query;
-    // Las pendientes primero y las pagadas al final
-    const ordenadas = (data || []).slice().sort((a, b) => {
-      const aPagada = a.estado === "pagada" ? 1 : 0;
-      const bPagada = b.estado === "pagada" ? 1 : 0;
-      return aPagada - bPagada;
-    });
+    const ordenadas = data || [];
     setCuentas(ordenadas);
     setLoading(false);
   }
 
   useEffect(() => {
     loadCuentas();
-  }, [filtro]);
+  }, []);
 
   function openPago(cuenta) {
     setCuentaActiva(cuenta);
@@ -86,18 +80,6 @@ export default function CuentasPorCobrarPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        {["todas", "pendiente", "pagada"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFiltro(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium capitalize ${filtro === f ? "bg-ocean-600 text-white" : "bg-white text-ocean-600"}`}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
       <div className="card overflow-x-auto">
         <table className="beach-table w-full">
           <thead>
@@ -113,7 +95,7 @@ export default function CuentasPorCobrarPage() {
           <tbody>
             {loading && <tr><td colSpan={6} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
             {!loading && cuentas.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">No hay cuentas registradas.</td></tr>
+              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">No hay cuentas pendientes por cobrar.</td></tr>
             )}
             {cuentas.map((c) => (
               <tr key={c.id}>
