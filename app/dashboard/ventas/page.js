@@ -16,7 +16,6 @@ export default function VentasPage() {
 
   const [clienteId, setClienteId] = useState("");
   const [tipoPago, setTipoPago] = useState("contado");
-  const [fechaVenc, setFechaVenc] = useState("");
   const [items, setItems] = useState([]); // {producto_id, variante_id, cantidad, precio_unitario}
 
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
@@ -166,7 +165,6 @@ export default function VentasPage() {
     setNuevoCliente(clienteVacio);
     setClienteId("");
     setTipoPago("contado");
-    setFechaVenc("");
     setItems([{ producto_id: "", variante_id: "", cantidad: 1, precio_unitario: 0 }]);
     setShowForm(true);
   }
@@ -263,7 +261,7 @@ export default function VentasPage() {
         monto_total: total,
         monto_pagado: 0,
         saldo: total,
-        fecha_vencimiento: fechaVenc || null,
+        fecha_vencimiento: null,
         estado: "pendiente",
       });
     }
@@ -543,14 +541,6 @@ export default function VentasPage() {
                     {savingCliente ? "Guardando..." : "Guardar cliente"}
                   </button>
                 </div>
-              </div>
-            )}
-
-            {tipoPago === "credito" && (
-              <div className="mb-4">
-                <label className="text-sm font-medium">Fecha de vencimiento</label>
-                <input type="date" className="input-field mt-1" value={fechaVenc}
-                  onChange={(e) => setFechaVenc(e.target.value)} />
               </div>
             )}
 
