@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, X, Trash2, DollarSign } from "lucide-react";
 
 const clienteVacio = { nombre: "", telefono: "", email: "", direccion: "" };
 
@@ -28,12 +28,17 @@ export default function VentasPage() {
   const [abonosVenta, setAbonosVenta] = useState(0);
   const [eliminando, setEliminando] = useState(false);
 
+  const [ventaACobrar, setVentaACobrar] = useState(null);
+  const [montoCobro, setMontoCobro] = useState("");
+  const [metodoCobro, setMetodoCobro] = useState("efectivo");
+  const [cobrando, setCobrando] = useState(false);
+
   async function loadAll() {
     setLoading(true);
     const [{ data: v }, { data: c }, { data: p }] = await Promise.all([
       supabase
         .from("ventas")
-        .select("*, clientes(nombre), cuentas_por_cobrar(saldo, estado)")
+        .select("*, clientes(nombre), cuentas_por_cobrar(id, monto_total, monto_pagado, saldo, estado)")
         .order("fecha", { ascending: false }),
       supabase.from("clientes").select("id, nombre").order("nombre"),
       supabase
@@ -275,6 +280,54 @@ export default function VentasPage() {
     loadAll();
   }
 
+  function pedirCobrar(v) {
+    setVentaACobrar(v);
+    setMontoCobro(pagoDe(v).saldo.toFixed(2));
+    setMetodoCobro("efectivo");
+  }
+
+  async function registrarCobro(e) {
+    e.preventDefault();
+    const v = ventaACobrar;
+    const cuenta = (v.cuentas_por_cobrar || []).find((c) => Number(c.saldo) > 0);
+    if (!cuenta) return;
+    const abono = Number(montoCobro);
+    if (!(abono > 0) || abono > Number(cuenta.saldo) + 0.001) {
+      alert("Ingresa un monto válido (no puede exceder el saldo).");
+      return;
+    }
+    setCobrando(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error: e1 } = await supabase.from("pagos").insert({
+      cuenta_id: cuenta.id,
+      monto: abono,
+      metodo_pago: metodoCobro,
+      usuario_email: user?.email,
+    });
+    if (e1) {
+      setCobrando(false);
+      alert("No se pudo registrar el pago: " + e1.message);
+      return;
+    }
+    const nuevoPagado = Number(cuenta.monto_pagado) + abono;
+    const nuevoSaldo = Math.max(0, Number(cuenta.monto_total) - nuevoPagado);
+    const { error: e2 } = await supabase
+      .from("cuentas_por_cobrar")
+      .update({
+        monto_pagado: nuevoPagado,
+        saldo: nuevoSaldo,
+        estado: nuevoSaldo <= 0.001 ? "pagada" : "pendiente",
+      })
+      .eq("id", cuenta.id);
+    setCobrando(false);
+    if (e2) {
+      alert("No se pudo actualizar la cuenta: " + e2.message);
+      return;
+    }
+    setVentaACobrar(null);
+    loadAll();
+  }
+
   // Estado de cobro de una venta: contado = pagada; crédito = según su cuenta por cobrar
   function pagoDe(v) {
     if (v.tipo_pago !== "credito") return { pendiente: false, saldo: 0 };
@@ -370,7 +423,15 @@ export default function VentasPage() {
               </span>
             </div>
 
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-end gap-4">
+              {pago.pendiente && (
+                <button
+                  onClick={() => pedirCobrar(v)}
+                  className="flex items-center gap-1 text-sm text-ocean-600 hover:text-ocean-800"
+                >
+                  <DollarSign size={15} /> Registrar pago
+                </button>
+              )}
               <button
                 onClick={() => pedirEliminar(v)}
                 className="flex items-center gap-1 text-sm text-sunset-500 hover:text-sunset-600"
@@ -416,6 +477,14 @@ export default function VentasPage() {
                     </span>
                   ) : (
                     <span className="text-palm-600">Pagada</span>
+                  )}
+                  {pago.pendiente && (
+                    <button
+                      onClick={() => pedirCobrar(v)}
+                      className="ml-3 inline-flex items-center gap-1 text-sm text-ocean-600 hover:text-ocean-800"
+                    >
+                      <DollarSign size={14} /> Registrar pago
+                    </button>
                   )}
                 </td>
                 <td>
@@ -596,6 +665,34 @@ export default function VentasPage() {
 
             <button type="submit" disabled={saving} className="btn-primary w-full">
               {saving ? "Guardando..." : "Registrar venta"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {ventaACobrar && (
+        <div className="fixed inset-0 bg-ocean-900/40 flex items-center justify-center z-50 px-4">
+          <form onSubmit={registrarCobro} className="card w-full max-w-sm p-6 relative">
+            <button type="button" onClick={() => setVentaACobrar(null)} className="absolute right-4 top-4 text-ocean-400">
+              <X size={20} />
+            </button>
+            <h2 className="text-lg font-bold text-ocean-800 mb-1">Registrar pago</h2>
+            <p className="text-sm text-ocean-500 mb-4">
+              {ventaACobrar.clientes?.nombre || "Cliente general"} — Saldo: ${pagoDe(ventaACobrar).saldo.toFixed(2)}
+            </p>
+            <label className="text-sm font-medium">Monto</label>
+            <input type="number" step="0.01" min="0.01" max={pagoDe(ventaACobrar).saldo} required
+              className="input-field mt-1 mb-1" value={montoCobro}
+              onChange={(e) => setMontoCobro(e.target.value)} />
+            <p className="text-xs text-ocean-500 mb-3">Si pagó todo, deja el monto completo y la venta pasa a Pagada.</p>
+            <label className="text-sm font-medium">Método de pago</label>
+            <select className="input-field mt-1 mb-5" value={metodoCobro} onChange={(e) => setMetodoCobro(e.target.value)}>
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="tarjeta">Tarjeta</option>
+            </select>
+            <button type="submit" disabled={cobrando} className="btn-primary w-full">
+              {cobrando ? "Guardando..." : "Registrar pago"}
             </button>
           </form>
         </div>
