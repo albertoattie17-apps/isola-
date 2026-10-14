@@ -33,7 +33,7 @@ export default function VentasPage() {
     const [{ data: v }, { data: c }, { data: p }] = await Promise.all([
       supabase
         .from("ventas")
-        .select("*, clientes(nombre), cuentas_por_cobrar(saldo, estado, fecha_vencimiento)")
+        .select("*, clientes(nombre), cuentas_por_cobrar(saldo, estado)")
         .order("fecha", { ascending: false }),
       supabase.from("clientes").select("id, nombre").order("nombre"),
       supabase
@@ -273,13 +273,10 @@ export default function VentasPage() {
 
   // Estado de cobro de una venta: contado = pagada; crédito = según su cuenta por cobrar
   function pagoDe(v) {
-    if (v.tipo_pago !== "credito") return { pendiente: false, saldo: 0, vencida: false };
+    if (v.tipo_pago !== "credito") return { pendiente: false, saldo: 0 };
     const cuentas = v.cuentas_por_cobrar || [];
     const saldo = cuentas.reduce((acc, c) => acc + Number(c.saldo || 0), 0);
-    const pendiente = saldo > 0;
-    const hoy = new Date().toISOString().slice(0, 10);
-    const vencida = pendiente && cuentas.some((c) => c.fecha_vencimiento && c.fecha_vencimiento < hoy);
-    return { pendiente, saldo, vencida };
+    return { pendiente: saldo > 0, saldo };
   }
 
   const totalPendientes = ventas.filter((v) => pagoDe(v).pendiente).length;
@@ -373,7 +370,7 @@ export default function VentasPage() {
                 }`}
               >
                 {pago.pendiente
-                  ? `${pago.vencida ? "Vencida" : "Pendiente"} · $${pago.saldo.toFixed(2)}`
+                  ? `Pendiente · $${pago.saldo.toFixed(2)}`
                   : "Pagada"}
               </span>
             </div>
@@ -422,7 +419,7 @@ export default function VentasPage() {
                 <td>
                   {pago.pendiente ? (
                     <span className="text-sunset-600 font-medium">
-                      {pago.vencida ? "Vencida" : "Pendiente"} · ${pago.saldo.toFixed(2)}
+                      Pendiente · ${pago.saldo.toFixed(2)}
                     </span>
                   ) : (
                     <span className="text-palm-600">Pagada</span>

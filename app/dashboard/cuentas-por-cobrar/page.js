@@ -18,10 +18,10 @@ export default function CuentasPorCobrarPage() {
     let query = supabase
       .from("cuentas_por_cobrar")
       .select("*, clientes(nombre)")
-      .order("fecha_vencimiento", { ascending: true });
+      .order("created_at", { ascending: false });
     if (filtro !== "todas") query = query.eq("estado", filtro);
     const { data } = await query;
-    // Las pendientes primero (por fecha de vencimiento) y las pagadas al final
+    // Las pendientes primero y las pagadas al final
     const ordenadas = (data || []).slice().sort((a, b) => {
       const aPagada = a.estado === "pagada" ? 1 : 0;
       const bPagada = b.estado === "pagada" ? 1 : 0;
@@ -77,11 +77,6 @@ export default function CuentasPorCobrarPage() {
     loadCuentas();
   }
 
-  function estaVencida(cuenta) {
-    if (!cuenta.fecha_vencimiento || cuenta.estado === "pagada") return false;
-    return new Date(cuenta.fecha_vencimiento) < new Date();
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -111,15 +106,14 @@ export default function CuentasPorCobrarPage() {
               <th>Total</th>
               <th>Pagado</th>
               <th>Saldo</th>
-              <th>Vencimiento</th>
               <th>Estado</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={7} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
+            {loading && <tr><td colSpan={6} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
             {!loading && cuentas.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-6 text-ocean-400">No hay cuentas registradas.</td></tr>
+              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">No hay cuentas registradas.</td></tr>
             )}
             {cuentas.map((c) => (
               <tr key={c.id}>
@@ -127,12 +121,9 @@ export default function CuentasPorCobrarPage() {
                 <td>${Number(c.monto_total).toFixed(2)}</td>
                 <td>${Number(c.monto_pagado).toFixed(2)}</td>
                 <td className="font-semibold">${Number(c.saldo).toFixed(2)}</td>
-                <td>{c.fecha_vencimiento || "-"}</td>
                 <td>
                   {c.estado === "pagada" ? (
                     <span className="text-palm-600 font-medium">Pagada</span>
-                  ) : estaVencida(c) ? (
-                    <span className="text-sunset-600 font-medium">Vencida</span>
                   ) : (
                     <span className="text-sand-600 font-medium">Pendiente</span>
                   )}
