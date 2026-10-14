@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, X, Trash2, DollarSign } from "lucide-react";
+import { Plus, X, Trash2, Pencil } from "lucide-react";
 
 const clienteVacio = { nombre: "", telefono: "", email: "", direccion: "" };
 
@@ -429,7 +429,7 @@ export default function VentasPage() {
                   onClick={() => pedirCobrar(v)}
                   className="flex items-center gap-1 text-sm text-ocean-600 hover:text-ocean-800"
                 >
-                  <DollarSign size={15} /> Registrar pago
+                  <Pencil size={15} /> Editar
                 </button>
               )}
               <button
@@ -478,24 +478,28 @@ export default function VentasPage() {
                   ) : (
                     <span className="text-palm-600">Pagada</span>
                   )}
-                  {pago.pendiente && (
-                    <button
-                      onClick={() => pedirCobrar(v)}
-                      className="ml-3 inline-flex items-center gap-1 text-sm text-ocean-600 hover:text-ocean-800"
-                    >
-                      <DollarSign size={14} /> Registrar pago
-                    </button>
-                  )}
                 </td>
                 <td>
-                  <button
-                    onClick={() => pedirEliminar(v)}
-                    title="Eliminar venta"
-                    aria-label="Eliminar venta"
-                    className="text-sunset-500 hover:text-sunset-700"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex gap-2">
+                    {pago.pendiente && (
+                      <button
+                        onClick={() => pedirCobrar(v)}
+                        title="Editar pago"
+                        aria-label="Editar pago"
+                        className="text-ocean-600 hover:text-ocean-800"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => pedirEliminar(v)}
+                      title="Eliminar venta"
+                      aria-label="Eliminar venta"
+                      className="text-sunset-500 hover:text-sunset-700"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
               );
