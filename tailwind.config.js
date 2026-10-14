@@ -50,7 +50,7 @@ module.exports = {
         },
       },
       backgroundImage: {
-        "beach-gradient": "linear-gradient(160deg, #fecaca 0%, #f87171 50%, #dc2626 100%)",
+        "beach-gradient": "linear-gradient(160deg, #eefcfb 0%, #d4f5f3 35%, #faf0d9 100%)",
       },
     },
   },
