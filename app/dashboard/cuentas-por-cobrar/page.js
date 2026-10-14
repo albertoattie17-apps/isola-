@@ -9,31 +9,25 @@ export default function CuentasPorCobrarPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [cuentaActiva, setCuentaActiva] = useState(null);
-  const [filtro, setFiltro] = useState("pendientes"); // pendientes | todas
   const [monto, setMonto] = useState("");
   const [metodo, setMetodo] = useState("efectivo");
 
   async function loadCuentas() {
     setLoading(true);
-    // Por defecto solo pendientes; "Todas" incluye también las pagadas (al final)
-    let query = supabase
+    // Las cuentas ya pagadas no se muestran aquí
+    const { data } = await supabase
       .from("cuentas_por_cobrar")
       .select("*, clientes(nombre)")
+      .eq("estado", "pendiente")
       .order("created_at", { ascending: false });
-    if (filtro === "pendientes") query = query.eq("estado", "pendiente");
-    const { data } = await query;
-    const ordenadas = (data || []).slice().sort((a, b) => {
-      const aPagada = a.estado === "pagada" ? 1 : 0;
-      const bPagada = b.estado === "pagada" ? 1 : 0;
-      return aPagada - bPagada;
-    });
+    const ordenadas = data || [];
     setCuentas(ordenadas);
     setLoading(false);
   }
 
   useEffect(() => {
     loadCuentas();
-  }, [filtro]);
+  }, []);
 
   function openPago(cuenta) {
     setCuentaActiva(cuenta);
@@ -87,15 +81,7 @@ export default function CuentasPorCobrarPage() {
       </div>
 
       <div className="flex gap-2 mb-4">
-        {[["pendientes", "Pendientes"], ["todas", "Todas"]].map(([f, label]) => (
-          <button
-            key={f}
-            onClick={() => setFiltro(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium ${filtro === f ? "bg-ocean-600 text-white" : "bg-white text-ocean-600"}`}
-          >
-            {label}
-          </button>
-        ))}
+        <span className="px-4 py-1.5 rounded-full text-sm font-medium bg-ocean-600 text-white">Todas</span>
       </div>
 
       <div className="card overflow-x-auto">
