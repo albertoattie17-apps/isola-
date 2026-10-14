@@ -350,15 +350,6 @@ export default function VentasPage() {
             <div className="mt-3 pt-3 border-t border-ocean-100 flex flex-wrap gap-2">
               <span
                 className={`text-sm px-3 py-1 rounded-full border capitalize ${
-                  v.tipo_pago === "credito"
-                    ? "border-sand-400 text-sand-700 bg-sand-100"
-                    : "border-ocean-200 text-ocean-700 bg-white"
-                }`}
-              >
-                {v.tipo_pago === "credito" ? "Crédito" : "Contado"}
-              </span>
-              <span
-                className={`text-sm px-3 py-1 rounded-full border capitalize ${
                   v.estado === "anulada"
                     ? "border-sunset-400 text-sunset-600 bg-sunset-400/10"
                     : "border-palm-300 text-palm-700 bg-palm-50"
@@ -399,7 +390,6 @@ export default function VentasPage() {
             <tr>
               <th>Fecha</th>
               <th>Cliente</th>
-              <th>Tipo pago</th>
               <th>Total</th>
               <th>Estado</th>
               <th>Cobro</th>
@@ -407,9 +397,9 @@ export default function VentasPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={7} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
+            {loading && <tr><td colSpan={6} className="text-center py-6 text-ocean-400">Cargando...</td></tr>}
             {!loading && ventasVisibles.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-6 text-ocean-400">{sinResultados}</td></tr>
+              <tr><td colSpan={6} className="text-center py-6 text-ocean-400">{sinResultados}</td></tr>
             )}
             {ventasVisibles.map((v) => {
               const pago = pagoDe(v);
@@ -417,7 +407,6 @@ export default function VentasPage() {
               <tr key={v.id}>
                 <td>{new Date(v.fecha).toLocaleString()}</td>
                 <td>{v.clientes?.nombre || "Cliente general"}</td>
-                <td className="capitalize">{v.tipo_pago}</td>
                 <td>${Number(v.total).toFixed(2)}</td>
                 <td className="capitalize">{v.estado}</td>
                 <td>
