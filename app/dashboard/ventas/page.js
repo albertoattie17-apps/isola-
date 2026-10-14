@@ -15,7 +15,7 @@ export default function VentasPage() {
   const [saving, setSaving] = useState(false);
 
   const [clienteId, setClienteId] = useState("");
-  const [tipoPago, setTipoPago] = useState("contado");
+  const [tipoPago, setTipoPago] = useState("");
   const [items, setItems] = useState([]); // {producto_id, variante_id, cantidad, precio_unitario}
 
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
@@ -164,7 +164,7 @@ export default function VentasPage() {
     setShowNuevoCliente(false);
     setNuevoCliente(clienteVacio);
     setClienteId("");
-    setTipoPago("contado");
+    setTipoPago("");
     setItems([{ producto_id: "", variante_id: "", cantidad: 1, precio_unitario: 0 }]);
     setShowForm(true);
   }
@@ -200,6 +200,10 @@ export default function VentasPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!tipoPago) {
+      alert("Selecciona si la venta está pagada o pendiente.");
+      return;
+    }
     if (items.length === 0 || items.some((it) => !it.producto_id || !it.variante_id)) {
       alert("Selecciona producto y talla en cada línea.");
       return;
@@ -469,7 +473,8 @@ export default function VentasPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Pago</label>
-                <select className="input-field mt-1" value={tipoPago} onChange={(e) => setTipoPago(e.target.value)}>
+                <select required className="input-field mt-1" value={tipoPago} onChange={(e) => setTipoPago(e.target.value)}>
+                  <option value="">Seleccionar</option>
                   <option value="contado">Pagado</option>
                   <option value="credito">Pendiente</option>
                 </select>
