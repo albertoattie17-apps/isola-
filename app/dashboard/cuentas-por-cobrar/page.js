@@ -9,25 +9,31 @@ export default function CuentasPorCobrarPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [cuentaActiva, setCuentaActiva] = useState(null);
+  const [filtro, setFiltro] = useState("pendientes"); // pendientes | todas
   const [monto, setMonto] = useState("");
   const [metodo, setMetodo] = useState("efectivo");
 
   async function loadCuentas() {
     setLoading(true);
-    // Solo las cuentas pendientes; las pagadas ya no se muestran aquí
-    const { data } = await supabase
+    // Por defecto solo pendientes; "Todas" incluye también las pagadas (al final)
+    let query = supabase
       .from("cuentas_por_cobrar")
       .select("*, clientes(nombre)")
-      .eq("estado", "pendiente")
       .order("created_at", { ascending: false });
-    const ordenadas = data || [];
+    if (filtro === "pendientes") query = query.eq("estado", "pendiente");
+    const { data } = await query;
+    const ordenadas = (data || []).slice().sort((a, b) => {
+      const aPagada = a.estado === "pagada" ? 1 : 0;
+      const bPagada = b.estado === "pagada" ? 1 : 0;
+      return aPagada - bPagada;
+    });
     setCuentas(ordenadas);
     setLoading(false);
   }
 
   useEffect(() => {
     loadCuentas();
-  }, []);
+  }, [filtro]);
 
   function openPago(cuenta) {
     setCuentaActiva(cuenta);
@@ -78,6 +84,18 @@ export default function CuentasPorCobrarPage() {
           <h1 className="text-2xl font-bold text-ocean-800">Cuentas por Cobrar</h1>
           <p className="text-ocean-500">Ventas a crédito y abonos de clientes</p>
         </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        {[["pendientes", "Pendientes"], ["todas", "Todas"]].map(([f, label]) => (
+          <button
+            key={f}
+            onClick={() => setFiltro(f)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium ${filtro === f ? "bg-ocean-600 text-white" : "bg-white text-ocean-600"}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="card overflow-x-auto">
