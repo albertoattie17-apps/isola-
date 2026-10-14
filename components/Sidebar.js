@@ -19,8 +19,8 @@ const links = [
   { href: "/dashboard/productos", label: "Productos", icon: Package },
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
   { href: "/dashboard/ventas", label: "Ventas", icon: ShoppingCart },
-  { href: "/dashboard/inventario", label: "Inventario", icon: Boxes },
   { href: "/dashboard/cuentas-por-cobrar", label: "Por Cobrar", icon: Wallet },
+  { href: "/dashboard/inventario", label: "Inventario", icon: Boxes },
 ];
 
 export default function Sidebar() {
