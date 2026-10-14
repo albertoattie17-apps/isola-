@@ -468,10 +468,10 @@ export default function VentasPage() {
                 </button>
               </div>
               <div>
-                <label className="text-sm font-medium">Tipo de pago</label>
+                <label className="text-sm font-medium">Pago</label>
                 <select className="input-field mt-1" value={tipoPago} onChange={(e) => setTipoPago(e.target.value)}>
-                  <option value="contado">Contado</option>
-                  <option value="credito">Crédito</option>
+                  <option value="contado">Pagado</option>
+                  <option value="credito">Pendiente</option>
                 </select>
               </div>
             </div>
