@@ -11,7 +11,7 @@ export default function CuentasPorCobrarPage() {
   const [cuentaActiva, setCuentaActiva] = useState(null);
   const [monto, setMonto] = useState("");
   const [metodo, setMetodo] = useState("efectivo");
-  const [filtro, setFiltro] = useState("pendiente");
+  const [filtro, setFiltro] = useState("todas");
 
   async function loadCuentas() {
     setLoading(true);
@@ -21,7 +21,13 @@ export default function CuentasPorCobrarPage() {
       .order("fecha_vencimiento", { ascending: true });
     if (filtro !== "todas") query = query.eq("estado", filtro);
     const { data } = await query;
-    setCuentas(data || []);
+    // Las pendientes primero (por fecha de vencimiento) y las pagadas al final
+    const ordenadas = (data || []).slice().sort((a, b) => {
+      const aPagada = a.estado === "pagada" ? 1 : 0;
+      const bPagada = b.estado === "pagada" ? 1 : 0;
+      return aPagada - bPagada;
+    });
+    setCuentas(ordenadas);
     setLoading(false);
   }
 
@@ -86,7 +92,7 @@ export default function CuentasPorCobrarPage() {
       </div>
 
       <div className="flex gap-2 mb-4">
-        {["pendiente", "pagada", "todas"].map((f) => (
+        {["todas", "pendiente", "pagada"].map((f) => (
           <button
             key={f}
             onClick={() => setFiltro(f)}
